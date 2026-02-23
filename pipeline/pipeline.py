@@ -1,14 +1,15 @@
+import sys
+
 import pandas as pd
-import pyarrow
-from datetime import date
 
-today = date.today()
-data = {'Name': ['Alex'], 'Gender': ['Male']}
+print("arguments", sys.argv)
 
-df = pd.DataFrame(data)
+day = int(sys.argv[1])
+print(f"Running pipeline for day {day}")
 
-df['Date'] = today
-print("Successfully created a Pandas DataFrame:")
-print(df)
 
-df.to_parquet(f"output_{today}.parquet")
+
+df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+print(df.head())
+
+df.to_parquet(f"output_day_{sys.argv[1]}.parquet")
