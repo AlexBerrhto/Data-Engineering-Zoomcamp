@@ -1,22 +1,19 @@
-# Start with slim Python 3.13 image
 FROM python:3.13.10-slim
 
-# Copy uv binary from official uv image (multi-stage build pattern)
+# Copy uv binary
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/
 
-# Set working directory
 WORKDIR /app
-
-# Add virtual environment to PATH so we can use installed packages
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Copy dependency files first (better layer caching)
-COPY "pyproject.toml" "uv.lock" ".python-version" ./
-# Install dependencies from lock file (ensures reproducible builds)
-RUN uv sync --locked
+# Copy dependency files (using wildcard for uv.lock)
+COPY pyproject.toml .python-version uv.loc[k] ./
+RUN uv sync
 
-# Copy application code
-COPY pipeline.py pipeline.py
+# --- THE FIX ---
+# Note the DOTS at the end of both lines
+COPY onlinestore.py .
+COPY online_retail_II.xlsx .
+# ---------------
 
-# Set entry point
-ENTRYPOINT ["python", "pipeline.py"]
+ENTRYPOINT ["python", "onlinestore.py"]
