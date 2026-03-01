@@ -1,52 +1,48 @@
-Retail Data Ingestion Pipeline
-An automated ETL (Extract, Transform, Load) pipeline designed to process over 1 million rows of retail transaction data from Excel into a PostgreSQL database using Docker.
+# Retail Data Ingestion Pipeline
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white) ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white) ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
-🏗️ Architecture Diagram
-The following diagram illustrates how the three containers interact within the isolated Docker network:
+An automated ETL (Extract, Transform, Load) pipeline designed to process over **1 million rows** of retail transaction data from Excel into a PostgreSQL database using Docker.
 
-🛠️ Tech Stack
-Language: Python 3.13.10-slim
+---
 
-Libraries: pandas, openpyxl, sqlalchemy, psycopg2-binary, tqdm
+## Architecture Overview
+The system utilizes three primary containers connected via a dedicated bridge network:
 
-Infrastructure: Docker, Docker Networking
+* **PostgreSQL 15**: The relational data warehouse.
+* **Python Feeder**: Custom-built image for high-speed data streaming.
+* **pgAdmin 4**: Web-based administration and visualization.
 
-Database: PostgreSQL 15
 
-Management: pgAdmin 4
 
-📄 The Dockerfile (The "Blueprint")
-We "Dockerized" the Python script by creating a custom image. This process packages the code, the environment, and the data into a single 702MB unit.
+---
 
-Dockerfile
+## The Dockerfile Breakdown
+We "Dockerized" the environment to ensure portability and consistency. Each instruction creates a layer in our final **702MB** image.
 
-# 1. Start with a lightweight Python base
-FROM python:3.13.10-slim
+| Instruction | Purpose |
+| :--- | :--- |
+| `FROM python:3.13.10-slim` | Lightweight Linux base with Python pre-installed. |
+| `WORKDIR /app` | Sets the internal container directory for all operations. |
+| `COPY requirements.txt .` | Pulls in the library list (`pandas`, `sqlalchemy`, etc). |
+| `RUN pip install ...` | Bakes the dependencies into the image layer. |
+| **`COPY . .`** | **Critical:** Copies the script and the 50MB Excel dataset into the image. |
+| `ENTRYPOINT` | Automates the execution of `onlinestore.py` on startup. |
 
-# 2. Set internal working directory
-WORKDIR /app
 
-# 3. Copy and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# 4. Copy the script AND the 50MB Excel file into the image
-COPY . .
+---
 
-# 5. Define how to run the script
-ENTRYPOINT ["python", "onlinestore.py"]
-🚀 Step-by-Step Setup
-1. Network Configuration
-Created a virtual bridge so containers can communicate using their names (e.g., postgres-db) instead of IP addresses.
+##  Deployment Steps
 
-Bash
-
+### 1. Network Setup
+Create a virtual bridge so containers can communicate using names instead of IPs.
+```bash
 docker network create pipeline-network
-2. Database Deployment
-Launched the PostgreSQL instance.
+```
 
-Bash
-
+### 2: Database Launch
+Start the PostgreSQL instance with custom credentials.
+```bash
 docker run -d \
   --name postgres-db \
   --network pipeline-network \
@@ -55,28 +51,24 @@ docker run -d \
   -e POSTGRES_DB=online_retail \
   -p 5432:5432 \
   postgres:15
-3. Build & Run Ingestion
-Build the image:
+```
 
-Bash
-
+### 3: Build & Run Ingestion
+Build the custom image and run the data feeder.
+```bash
 docker build -t feeder-image .
-Execute the pipeline:
 
-Bash
-
+# Run the ingestion script
 docker run -it --rm --network pipeline-network feeder-image \
   --pg_host postgres-db \
   --pg_user root \
   --pg_pass root \
   --pg_db online_retail
-Performance Note: The script successfully combined multiple Excel sheets and uploaded 1,067,371 rows to the retail_data table.
+```
 
-4. Verification (pgAdmin)
-Launched the GUI to inspect the data.
-
-Bash
-
+### 4: Verification (pgAdmin)
+Launch the GUI to inspect the data at http://localhost:8085.
+```bash
 docker run -d \
   --name pgadmin \
   --network pipeline-network \
@@ -84,26 +76,7 @@ docker run -d \
   -e PGADMIN_DEFAULT_PASSWORD="root" \
   -p 8085:80 \
   dpage/pgadmin4
-📊 SQL Analysis
-Connect to http://localhost:8085 and run these in the Query Tool:
 
-Check Total Rows:
 
-SQL
 
-SELECT count(*) FROM retail_data;
-Find Top 5 Best Selling Items:
 
-SQL
-
-SELECT "Description", SUM("Quantity") as total_sold
-FROM retail_data
-GROUP BY "Description"
-ORDER BY total_sold DESC
-LIMIT 5;
-🧹 Maintenance
-Start Services: docker start postgres-db pgadmin
-
-Stop Services: docker stop postgres-db pgadmin
-
-Cleanup: docker system prune (to remove stopped containers and <none> images).
