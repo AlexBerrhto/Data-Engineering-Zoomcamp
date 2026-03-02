@@ -1,0 +1,49 @@
+services:
+  # 1. Database Service
+  postgres-db:
+    image: postgres:15
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: online_retail
+    ports:
+      - "5432:5432"
+    networks:
+      - pipeline-network
+
+  # 2. Management Tool
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "8085:80"
+    depends_on:
+      - postgres-db
+    networks:
+      - pipeline-network
+
+  # 3. Your Python Pipeline
+  feeder:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: data-feeder
+    depends_on:
+      - postgres-db
+    networks:
+      - pipeline-network
+    # We pass the CLI arguments we defined with 'Click' here
+    command: >
+      --pg_host postgres-db
+      --pg_user root
+      --pg_pass root
+      --pg_db online_retail
+      --chunksize 20000
+
+networks:
+  pipeline-network:
+    driver: bridge
