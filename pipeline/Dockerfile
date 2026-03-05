@@ -1,19 +1,23 @@
 FROM python:3.13.10-slim
 
 # Copy uv binary
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.6.6 /uv /bin/ 
 
+# Set working directory
 WORKDIR /app
-ENV PATH="/app/.venv/bin:$PATH"
 
-# Copy dependency files (using wildcard for uv.lock)
+# Optimization environment variables
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Copy dependency files
 COPY pyproject.toml .python-version uv.loc[k] ./
-RUN uv sync
 
-# --- THE FIX ---
-# Note the DOTS at the end of both lines
+# Install dependencies
+RUN uv sync --frozen
+
+# Copy the actual application files
 COPY onlinestore.py .
-COPY online_retail_II.xlsx .
-# ---------------
 
 ENTRYPOINT ["python", "onlinestore.py"]

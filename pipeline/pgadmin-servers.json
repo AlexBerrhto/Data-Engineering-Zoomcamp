@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Online Retail DB",
+      "Group": "Servers",
+      "Host": "postgres-db",
+      "Port": 5432,
+      "MaintenanceDB": "online_retail",
+      "Username": "root",
+      "SSLMode": "prefer"
+    }
+  }
+}

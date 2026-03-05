@@ -11,6 +11,11 @@ services:
       - "5432:5432"
     networks:
       - pipeline-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d online_retail"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # 2. Management Tool
   pgadmin:
@@ -25,6 +30,10 @@ services:
       - postgres-db
     networks:
       - pipeline-network
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./pgadmin-servers.json:/pgadmin4/servers.json  # ✅ auto-loads server config
+    
 
   # 3. Your Python Pipeline
   feeder:
@@ -33,17 +42,25 @@ services:
       dockerfile: Dockerfile
     container_name: data-feeder
     depends_on:
-      - postgres-db
+      postgres-db:
+        condition: service_healthy
     networks:
       - pipeline-network
-    # We pass the CLI arguments we defined with 'Click' here
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Mount the local file into the container's /app directory
+    volumes:
+      - ./online_retail_II.xlsx:/app/online_retail_II.xlsx:ro
     command: >
       --pg_host postgres-db
       --pg_user root
       --pg_pass root
       --pg_db online_retail
-      --chunksize 20000
+      --chunksize 10000
 
 networks:
   pipeline-network:
     driver: bridge
+
+volumes:          # ← add this
+  pgadmin-data:
